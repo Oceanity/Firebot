@@ -6,6 +6,10 @@ import {SavedChannelReward} from "../../../types/channel-rewards";
 
 type StringUpdatable = { update: boolean, newValue: string };
 type StatusUpdatable = { update: boolean, newValue: 'toggle' | boolean };
+type CooldownUpdatable = { update: boolean, newValue: {
+    enabled: 'toggle' | boolean;
+    seconds: string;
+}}
 
 type RewardWithTags = SavedChannelReward & { sortTags: string[] };
 
@@ -16,6 +20,7 @@ type EffectMeta = {
         cost: StringUpdatable;
         enabled: StatusUpdatable;
         paused: StatusUpdatable;
+        cooldown: CooldownUpdatable;
     };
     channelRewardId: string;
     useTag?: boolean;
@@ -72,11 +77,10 @@ const model: EffectType<EffectMeta> = {
         </eos-container>
 
         <eos-container ng-show="effect.channelRewardId != null || (effect.useTag && effect.sortTagId != null)" header="Reward Settings" pad-top="true">
-
-            <label class="control-fb control--checkbox">Update Enabled
-                <input type="checkbox" ng-click="effect.rewardSettings.enabled.update = !effect.rewardSettings.enabled.update" ng-checked="effect.rewardSettings.enabled.update"  aria-label="Toggle enabled" >
-                <div class="control__indicator"></div>
-            </label>
+            <firebot-checkbox
+                label="Update Enabled"
+                model="effect.rewardSettings.enabled.update"
+                aria-label="Toggle enabled" />
             <div ng-show="effect.rewardSettings.enabled.update" style="margin-bottom: 15px;">
                 <div class="btn-group" uib-dropdown>
                     <button id="single-button" type="button" class="btn btn-default" uib-dropdown-toggle>
@@ -90,10 +94,10 @@ const model: EffectType<EffectMeta> = {
                 </div>
             </div>
 
-            <label class="control-fb control--checkbox">Update Paused
-                <input type="checkbox" ng-click="effect.rewardSettings.paused.update = !effect.rewardSettings.paused.update" ng-checked="effect.rewardSettings.paused.update"  aria-label="Toggle paused" >
-                <div class="control__indicator"></div>
-            </label>
+            <firebot-checkbox
+                label="Update Paused"
+                model="effect.rewardSettings.paused.update"
+                aria-label="Toggle paused" />
             <div ng-show="effect.rewardSettings.paused.update" style="margin-bottom: 15px;">
                 <div class="btn-group" uib-dropdown>
                     <button id="single-button" type="button" class="btn btn-default" uib-dropdown-toggle>
@@ -108,46 +112,38 @@ const model: EffectType<EffectMeta> = {
             </div>
 
             <div ng-hide="effect.useTag">
-                <label class="control-fb control--checkbox">Update Name
-                    <input
-                        type="checkbox"
-                        ng-click="effect.rewardSettings.name.update = !effect.rewardSettings.name.update"
-                        ng-checked="effect.rewardSettings.name.update"
-                        aria-label="Update name"
-                    />
-                    <div class="control__indicator"></div>
-                </label>
+                <firebot-checkbox
+                    label="Update Name" 
+                    model="effect.rewardSettings.name.update"
+                    aria-label="Update name" />
                 <div ng-show="effect.rewardSettings.name.update" style="margin-bottom: 15px;">
                     <firebot-input model="effect.rewardSettings.name.newValue" placeholder-text="Enter text" />
                 </div>
 
-                <label class="control-fb control--checkbox">Update Description
-                    <input
-                        type="checkbox"
-                        ng-click="effect.rewardSettings.description.update = !effect.rewardSettings.description.update"
-                        ng-checked="effect.rewardSettings.description.update"
-                        aria-label="Update description"
-                    />
-                    <div class="control__indicator"></div>
-                </label>
+                <firebot-checkbox
+                    label="Update Description" 
+                    model="effect.rewardSettings.description.update"
+                    aria-label="Update description" />
                 <div ng-show="effect.rewardSettings.description.update" style="margin-bottom: 15px;">
                     <firebot-input model="effect.rewardSettings.description.newValue" use-text-area="true" placeholder-text="Enter text" />
                 </div>
 
-                <label class="control-fb control--checkbox">Update Cost
-                    <input
-                        type="checkbox"
-                        ng-click="effect.rewardSettings.cost.update = !effect.rewardSettings.cost.update"
-                        ng-checked="effect.rewardSettings.cost.update"
-                        aria-label="Update cost"
-                    />
-                    <div class="control__indicator"></div>
-                </label>
+                <firebot-checkbox
+                    label="Update Cost" 
+                    model="effect.rewardSettings.cost.update"
+                    aria-label="Update cost" />
                 <div ng-show="effect.rewardSettings.cost.update" style="margin-bottom: 15px;">
                     <firebot-input model="effect.rewardSettings.cost.newValue" placeholder-text="Enter new cost" />
                 </div>
-            </div>
 
+                <firebot-checkbox
+                    label="Update Cooldown" 
+                    model="effect.rewardSettings.cooldown.update"
+                    aria-label="Update cooldown" />
+                <div ng-show="effect.rewardSettings.cooldown.update" style="margin-bottom: 15px;">
+                    <firebot-input model="effect.rewardSettings.cooldown.newValue" placeholder-text="Enter new cooldown" />
+                </div>
+            </div>
         </eos-container>
     `,
     optionsController: ($scope, channelRewardsService, sortTagsService) => {
@@ -201,6 +197,13 @@ const model: EffectType<EffectMeta> = {
                 paused: {
                     update: false,
                     newValue: 'toggle'
+                },
+                cooldown: {
+                    update: false,
+                    newValue: {
+                        enabled: 'toggle',
+                        seconds: ""
+                    }
                 }
             };
         }
