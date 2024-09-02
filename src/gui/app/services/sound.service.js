@@ -1,18 +1,22 @@
 "use strict";
 
-(function() {
+(function () {
 
-    const { Howl, Howler } = require("howler");
+    const {
+        Howl,
+        Howler
+    } = require("howler");
 
     // This provides methods for playing sounds
 
     angular
         .module("firebotApp")
-        .factory("soundService", function(logger, settingsService, listenerService, $q, websocketService, backendCommunicator) {
+        .factory("soundService", function (logger, settingsService, listenerService, $q, websocketService,
+            backendCommunicator) {
             const service = {};
 
             // Connection Sounds
-            service.connectSound = function(type) {
+            service.connectSound = function (type) {
                 if (settingsService.soundsEnabled() === "On") {
                     const outputDevice = settingsService.getAudioOutputDevice();
                     if (type === "Online") {
@@ -24,7 +28,7 @@
             };
 
             let popCounter = 0;
-            service.popSound = function() {
+            service.popSound = function () {
                 if (settingsService.soundsEnabled() === "On") {
                     const outputDevice = settingsService.getAudioOutputDevice();
                     popCounter++;
@@ -35,12 +39,11 @@
                     service.playSound(`../sounds/pops/${popSoundName}`, 0.1, outputDevice);
                 }
             };
-            service.resetPopCounter = function() {
+            service.resetPopCounter = function () {
                 popCounter = 0;
             };
 
-            service.notificationSoundOptions = [
-                {
+            service.notificationSoundOptions = [{
                     name: "None",
                     path: ""
                 },
@@ -78,7 +81,7 @@
                 }
             ];
 
-            service.playChatNotification = function() {
+            service.playChatNotification = function () {
                 let selectedSound = settingsService.getTaggedNotificationSound();
 
                 if (selectedSound.name === "None") {
@@ -98,7 +101,7 @@
             };
 
 
-            service.playSound = function(path, volume, outputDevice, fileType = null, maxSoundLength = null) {
+            service.playSound = function (path, volume, outputDevice, fileType = null, maxSoundLength = null) {
 
                 if (outputDevice == null) {
                     outputDevice = settingsService.getAudioOutputDevice();
@@ -106,23 +109,25 @@
 
                 $q.when(service.getHowlSound(path, volume, outputDevice, fileType))
                     .then(sound => {
-
                         let maxSoundLengthTimeout;
                         // Clear listener after first call.
-                        sound.once('load', function() {
-                            sound.play();
+                        sound.once('load', function () {
+                            console.log("hi");
+                            let soundId = sound.play();
+                            sound.preservePitch = false;
+                            sound.rate(0.5, soundId);
 
                             const intMaxSoundLength = parseInt(maxSoundLength);
                             if (intMaxSoundLength > 0) {
-                                maxSoundLengthTimeout = setTimeout(function() {
+                                maxSoundLengthTimeout = setTimeout(function () {
                                     sound.stop();
                                     sound.unload();
-                                }, maxSoundLength * 1000);
+                                }, maxSoundLength * 1000 * 2);
                             }
                         });
 
                         // Fires when the sound finishes playing.
-                        sound.once('end', function() {
+                        sound.once('end', function () {
                             sound.unload();
                             clearInterval(maxSoundLengthTimeout);
                         });
@@ -131,19 +136,21 @@
                     });
             };
 
-            service.getHowlSound = function(path, volume, outputDevice = settingsService.getAudioOutputDevice(), fileType = null) {
+            service.getHowlSound = function (path, volume, outputDevice = settingsService
+                .getAudioOutputDevice(), fileType = null) {
                 return navigator.mediaDevices.enumerateDevices()
                     .then(deviceList => {
-                        const filteredDevice = deviceList.filter(d => d.label === outputDevice.label
-                            || d.deviceId === outputDevice.deviceId);
+                        const filteredDevice = deviceList.filter(d => d.label === outputDevice.label ||
+                            d.deviceId === outputDevice.deviceId);
 
-                        const sinkId = filteredDevice.length > 0 ? filteredDevice[0].deviceId : 'default';
+                        const sinkId = filteredDevice.length > 0 ? filteredDevice[0].deviceId :
+                            'default';
 
                         const sound = new Howl({
                             src: [path],
                             volume: volume,
                             format: fileType,
-                            html5: true,
+                            html5: false,
                             sinkId: sinkId,
                             preload: false
                         });
@@ -152,7 +159,7 @@
                     });
             };
 
-            service.getSoundDuration = function(path, format = undefined) {
+            service.getSoundDuration = function (path, format = undefined) {
                 return new Promise(resolve => {
 
                     console.log("duration for", path, format);
@@ -176,8 +183,9 @@
             });
 
             // Watches for an event from main process
-            listenerService.registerListener(
-                { type: listenerService.ListenerType.PLAY_SOUND },
+            listenerService.registerListener({
+                    type: listenerService.ListenerType.PLAY_SOUND
+                },
                 data => {
                     const filepath = data.filepath;
                     const volume = data.volume / 100 * 10;
@@ -205,12 +213,13 @@
                         });
 
                     } else {
-                        service.playSound(data.isUrl ? data.url : data.filepath, volume, selectedOutputDevice, data.format, data.maxSoundLength);
+                        service.playSound(data.isUrl ? data.url : data.filepath, volume,
+                            selectedOutputDevice, data.format, data.maxSoundLength);
                     }
                 }
             );
 
-            service.stopAllSounds = function() {
+            service.stopAllSounds = function () {
                 logger.info("Stopping all sounds...");
                 Howler.unload();
             };
