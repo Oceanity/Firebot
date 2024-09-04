@@ -27,7 +27,7 @@ type EffectMeta = {
     sortTagId?: string;
 }
 
-function updateRewardEnabledOrPaused(effect: EffectMeta, channelReward: SavedChannelReward) {
+function updateRewardEnabledPausedOrCooldown(effect: EffectMeta, channelReward: SavedChannelReward) {
     if (effect.rewardSettings.enabled.update) {
         channelReward.twitchData.isEnabled = effect.rewardSettings.enabled.newValue === 'toggle' ?
             !channelReward.twitchData.isEnabled :
@@ -37,6 +37,11 @@ function updateRewardEnabledOrPaused(effect: EffectMeta, channelReward: SavedCha
         channelReward.twitchData.isPaused = effect.rewardSettings.paused.newValue === 'toggle' ?
             !channelReward.twitchData.isPaused :
             effect.rewardSettings.paused.newValue === true;
+    }
+    if (effect.rewardSettings.cooldown.update) {
+        channelReward.twitchData.globalCooldownSetting.isEnabled = effect.rewardSettings.cooldown.newValue.enabled === 'toggle'
+            ? !channelReward.twitchData.globalCooldownSetting.isEnabled
+            : !!effect.rewardSettings.cooldown.newValue.enabled;
     }
 }
 
@@ -141,7 +146,7 @@ const model: EffectType<EffectMeta> = {
                     model="effect.rewardSettings.cooldown.update"
                     aria-label="Update cooldown" />
                 <div ng-show="effect.rewardSettings.cooldown.update" style="margin-bottom: 15px;">
-                    <firebot-input model="effect.rewardSettings.cooldown.newValue" placeholder-text="Enter new cooldown" />
+                    <firebot-input model="effect.rewardSettings.cooldown.newValue.seconds" placeholder-text="Enter new cooldown" />
                 </div>
             </div>
         </eos-container>
@@ -221,7 +226,8 @@ const model: EffectType<EffectMeta> = {
             !effect.rewardSettings.enabled.update &&
             !effect.rewardSettings.cost.update &&
             !effect.rewardSettings.name.update &&
-            !effect.rewardSettings.description.update) ||
+            !effect.rewardSettings.description.update &&
+            !effect.rewardSettings.cooldown.update) ||
             (effect.useTag &&
             !effect.rewardSettings.paused.update &&
             !effect.rewardSettings.enabled.update)) {
@@ -287,7 +293,10 @@ const model: EffectType<EffectMeta> = {
             if (effect.rewardSettings.cost.update) {
                 channelReward.twitchData.cost = parseInt(effect.rewardSettings.cost.newValue);
             }
-            updateRewardEnabledOrPaused(effect, channelReward);
+            if (effect.rewardSettings.cooldown.update && effect.rewardSettings.cooldown.newValue.seconds) {
+                channelReward.twitchData.globalCooldownSetting.globalCooldownSeconds = parseInt(effect.rewardSettings.cooldown.newValue.seconds);
+            }
+            updateRewardEnabledPausedOrCooldown(effect, channelReward);
             await channelRewardsManager.saveChannelReward(channelReward, true);
             return true;
         }
@@ -303,7 +312,7 @@ const model: EffectType<EffectMeta> = {
         const promises: Promise<SavedChannelReward>[] = [];
 
         rewards.forEach((channelReward) => {
-            updateRewardEnabledOrPaused(effect, channelReward);
+            updateRewardEnabledPausedOrCooldown(effect, channelReward);
             promises.push(channelRewardsManager.saveChannelReward(channelReward, true));
         });
 
