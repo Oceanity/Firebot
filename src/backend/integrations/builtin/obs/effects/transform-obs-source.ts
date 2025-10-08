@@ -1,9 +1,11 @@
 import { EffectType } from "../../../../../types/effects";
-import { OBSSceneItem, OBSSourceTransformKeys, transformSceneItem } from "../obs-remote";
+import { getSceneItemByName, OBSSceneItem, OBSSourceTransformKeys, transformSceneItem } from "../obs-remote";
 
 export const TransformSourceEffectType: EffectType<{
+    sourceSelectMode: "dropdown" | "custom";
     sceneName?: string;
     sceneItem?: OBSSceneItem;
+    sceneItemName?: string;
     duration: string | number;
     easeIn: boolean;
     easeOut: boolean;
@@ -22,6 +24,12 @@ export const TransformSourceEffectType: EffectType<{
         categories: ["common"]
     },
     optionsTemplate: `
+        <eos-container>
+            <firebot-radios
+                options="selectSourceOptions"
+                model="effect.sourceSelectMode">
+            </firebot-radios>
+        </eos-container>
         <eos-container ng-if="isUsingInvalidItemId" pad-top="true">
             <div class="alert alert-danger">
                 <p style="margin: 0">
@@ -29,7 +37,7 @@ export const TransformSourceEffectType: EffectType<{
                 </p>
             </div>
         </eos-container>
-        <eos-container header="OBS Scene" pad-top="true">
+        <eos-container ng-if="effect.sourceSelectMode === 'dropdown'" header="OBS Scene" pad-top="true">
             <div>
                 <button class="btn btn-link" ng-click="getScenes()">Refresh Scene Data</button>
             </div>
@@ -43,7 +51,7 @@ export const TransformSourceEffectType: EffectType<{
                 </ui-select-no-choice>
             </ui-select>
         </eos-container>
-        <eos-container ng-if="sceneItems != null && effect.sceneName != null" header="OBS Source" pad-top="true">
+        <eos-container ng-if="effect.sourceSelectMode === 'dropdown' && sceneItems != null && effect.sceneName != null" header="OBS Source" pad-top="true">
             <div>
                 <button class="btn btn-link" ng-click="getSources(effect.sceneName)">Refresh Source Data</button>
             </div>
@@ -60,7 +68,18 @@ export const TransformSourceEffectType: EffectType<{
                 No transformable sources found. {{ isObsConfigured ? "Is OBS running?" : "Have you configured the OBS integration?" }}
             </div>
         </eos-container>
-        <div ng-if="effect.sceneItem != null">
+        <eos-container ng-if="effect.sourceSelectMode === 'custom'" header="OBS Scene and Source" pad-top="true">
+            <firebot-input
+                model="effect.sceneName"
+                placeholder-text="Scene Name"
+                input-title="Scene Name"
+                style="margin-bottom: 20px" />
+            <firebot-input
+                model="effect.sceneItemName"
+                placeholder-text="Source Name"
+                input-title="Source Name" />
+        </eos-container>
+        <div ng-if="effect.sceneItem != null || effect.sourceSelectMode === 'custom'">
             <eos-container header="Duration" pad-top="true">
                 <firebot-input
                     input-type="number"
@@ -175,6 +194,21 @@ export const TransformSourceEffectType: EffectType<{
 
         $scope.scenes = [];
         $scope.sceneItems = [];
+
+        $scope.selectSourceOptions = {
+            dropdown: {
+                text: "Select Source",
+                description: "Pick the Scene and Source from dropdown lists"
+            },
+            custom: {
+                text: "Custom",
+                description: "Manually specify the Scene and Source by Name"
+            }
+        };
+        if (!$scope.effect.sourceSelectMode) {
+            $scope.effect.sourceSelectMode = "dropdown";
+        }
+
         $scope.alignmentOptions = Object.freeze({
             [5]: "Top Left",
             [4]: "Top",
@@ -238,11 +272,9 @@ export const TransformSourceEffectType: EffectType<{
         if (effect.sceneName == null) {
             return ["Please select a scene."];
         }
-        if (effect.sceneItem == null) {
+        if ((effect.sourceSelectMode === "dropdown" && effect.sceneItem == null)
+            || (effect.sourceSelectMode === "custom" && effect.sceneItemName == null)) {
             return ["Please select a source."];
-        }
-        if (effect.duration == null || effect.duration === "") {
-            return ["Please enter a duration."];
         }
         return [];
     },
@@ -253,7 +285,18 @@ export const TransformSourceEffectType: EffectType<{
         if (isNaN(Number(effect.duration))) {
             effect.duration = 0;
         }
-        const alignment = effect.alignment ? Number(effect.alignment) : undefined;
+
+        let sceneItem: OBSSceneItem;
+        switch (effect.sourceSelectMode) {
+            case "dropdown":
+                sceneItem = effect.sceneItem;
+                break;
+            case "custom":
+                sceneItem = await getSceneItemByName(effect.sceneName, effect.sceneItemName);
+                break;
+        }
+
+        const alignment = effect.alignment != null ? Number(effect.alignment) : undefined;
         const parsedStart: Record<string, number> = {};
         const parsedEnd: Record<string, number> = {};
         const transformKeys: Array<OBSSourceTransformKeys> = [];
@@ -283,8 +326,8 @@ export const TransformSourceEffectType: EffectType<{
         });
 
         await transformSceneItem(
-            effect.sceneItem.groupName ?? effect.sceneName,
-            effect.sceneItem.id ?? effect.sceneItem.itemId,
+            sceneItem.groupName ?? effect.sceneName,
+            sceneItem.id ?? sceneItem.itemId,
             Number(effect.duration) * 1000,
             parsedStart,
             parsedEnd,

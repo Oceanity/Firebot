@@ -1,12 +1,29 @@
 import { ScriptModules } from "@crowbartools/firebot-custom-scripts-types";
 import OBSWebSocket from "obs-websocket-js";
+import { JsonObject } from "type-fest";
+import { v4 as uuid } from "uuid";
+import logger from "../../../logwrapper";
 import {
+    OBS_CONNECTED_EVENT_ID,
     OBS_CURRENT_PROFILE_CHANGED_EVENT_ID,
     OBS_CURRENT_PROGRAM_SCENE_CHANGED_EVENT_ID,
     OBS_CURRENT_SCENE_COLLECTION_CHANGED_EVENT_ID,
     OBS_CURRENT_SCENE_TRANSITION_CHANGED_EVENT_ID,
     OBS_CURRENT_SCENE_TRANSITION_DURATION_CHANGED_EVENT_ID,
+    OBS_DISCONNECTED_EVENT_ID,
     OBS_EVENT_SOURCE_ID,
+    OBS_INPUT_ACTIVE_STATE_CHANGED_EVENT_ID,
+    OBS_INPUT_AUDIO_BALANCE_CHANGED_EVENT_ID,
+    OBS_INPUT_AUDIO_MONITOR_TYPE_CHANGED_EVENT_ID,
+    OBS_INPUT_AUDIO_SYNC_OFFSET_CHANGED_EVENT_ID,
+    OBS_INPUT_AUDIO_TRACKS_CHANGED_EVENT_ID,
+    OBS_INPUT_CREATED_EVENT_ID,
+    OBS_INPUT_MUTE_STATE_CHANGED_EVENT_ID,
+    OBS_INPUT_NAME_CHANGED_EVENT_ID,
+    OBS_INPUT_REMOVED_EVENT_ID,
+    OBS_INPUT_SETTINGS_CHANGED_EVENT_ID,
+    OBS_INPUT_SHOW_STATE_CHANGED_EVENT_ID,
+    OBS_INPUT_VOLUME_CHANGED_EVENT_ID,
     OBS_RECORDING_STARTED_EVENT_ID,
     OBS_RECORDING_STOPPED_EVENT_ID,
     OBS_REPLAY_BUFFER_SAVED_EVENT_ID,
@@ -16,23 +33,8 @@ import {
     OBS_SCENE_TRANSITION_STARTED_EVENT_ID,
     OBS_STREAM_STARTED_EVENT_ID,
     OBS_STREAM_STOPPED_EVENT_ID,
-    OBS_VENDOR_EVENT_EVENT_ID,
-    OBS_INPUT_CREATED_EVENT_ID,
-    OBS_INPUT_REMOVED_EVENT_ID,
-    OBS_INPUT_NAME_CHANGED_EVENT_ID,
-    OBS_INPUT_SETTINGS_CHANGED_EVENT_ID,
-    OBS_INPUT_ACTIVE_STATE_CHANGED_EVENT_ID,
-    OBS_INPUT_SHOW_STATE_CHANGED_EVENT_ID,
-    OBS_INPUT_MUTE_STATE_CHANGED_EVENT_ID,
-    OBS_INPUT_VOLUME_CHANGED_EVENT_ID,
-    OBS_INPUT_AUDIO_BALANCE_CHANGED_EVENT_ID,
-    OBS_INPUT_AUDIO_SYNC_OFFSET_CHANGED_EVENT_ID,
-    OBS_INPUT_AUDIO_MONITOR_TYPE_CHANGED_EVENT_ID,
-    OBS_INPUT_AUDIO_TRACKS_CHANGED_EVENT_ID,
-    OBS_CONNECTED_EVENT_ID,
-    OBS_DISCONNECTED_EVENT_ID
+    OBS_VENDOR_EVENT_EVENT_ID
 } from "./constants";
-import logger from "../../../logwrapper";
 
 type CachedGroupInfo = {
     /// The name of a group.
@@ -843,6 +845,15 @@ export type OBSSourceTransformKeys =
     | "scaleY"
     | "rotation";
 
+export type OBSCreateSourceParams = {
+    sceneName?: string;
+    sceneUuid?: string;
+    inputName?: string;
+    inputKind: string;
+    sceneItemEnabled?: boolean;
+    inputSettings?: JsonObject;
+}
+
 export async function getAllSources(): Promise<Array<OBSSource> | null> {
     if (!connected) {
         return null;
@@ -936,6 +947,16 @@ export async function getSceneItem(sceneName: string, sceneItemId: number): Prom
     }
 }
 
+export async function getSceneItemByName(sceneName: string, sceneItemName: string): Promise<OBSSceneItem> {
+    try {
+        const sceneItems = await getAllSceneItemsInScene(sceneName);
+        return sceneItems.find(item => item.name === sceneItemName);
+    } catch (error) {
+        logger.error(`Failed to get OBS scene item ${sceneItemName} in scene "${sceneName}"`, error);
+        return null;
+    }
+}
+
 export async function getGroupItem(groupName: string, groupItemId: number): Promise<OBSSceneItem> {
     try {
         const groupItems = await getAllSceneItemsInGroup(groupName);
@@ -989,13 +1010,44 @@ export async function setFilterEnabled(
     }
 }
 
-async function getSourceTypes() {
+export async function getSourceTypes() {
     try {
         const sourceTypes = await obs.call("GetInputKindList");
         return sourceTypes.inputKinds;
     } catch (error) {
         logger.error("Failed to get source types list", error);
         return [];
+    }
+}
+
+export async function getSourceSettings(inputName: string) {
+    try {
+        console.log("getSourceSettings", inputName);
+        const settings = await obs.call("GetInputSettings", {
+            inputName
+        });
+        console.log(settings);
+
+        return settings.inputSettings;
+    } catch (error) {
+        logger.error("Failed to get source default settings", error);
+        return null;
+    }
+}
+
+export async function getSourceDefaultSettings(inputKind: string) {
+    try {
+        console.log("getSourceDefaultSettings", inputKind);
+        const settings = await obs.call("GetInputDefaultSettings", {
+            inputKind
+        });
+
+        console.log(settings);
+
+        return settings.defaultInputSettings;
+    } catch (error) {
+        logger.error("Failed to get source default settings", error);
+        return null;
     }
 }
 
@@ -1109,6 +1161,24 @@ export const getOffsetMultipliersFromAlignment = (alignment: number) => (
         [0.5, 0, 1][offset]
     )
 );
+
+export async function createSource(
+    params: OBSCreateSourceParams
+) {
+    try {
+        const inputName = params.inputName ?? uuid();
+        console.log("createSource", params, inputName);
+
+        await obs.call("CreateInput", {
+            inputName,
+            ...params
+        });
+
+        return inputName;
+    } catch (error) {
+        logger.error("Failed to create source", error);
+    }
+}
 
 export async function transformSceneItem(
     sceneName: string,

@@ -1,22 +1,27 @@
 import { ScriptModules } from "@crowbartools/firebot-custom-scripts-types";
 import {
+    createSource,
     getAllSources,
-    getGroupList,
-    getSceneList,
-    getSceneCollectionList,
-    getSourceData,
-    SourceData,
-    OBSSource,
-    getSourcesWithFilters,
     getAudioSources,
-    getTextSources,
     getBrowserSources,
+    getColorSources,
+    getGroupList,
     getImageSources,
     getMediaSources,
-    getColorSources,
+    getSceneCollectionList,
+    getSceneList,
+    getSourceData,
+    getSourceDefaultSettings,
+    getSourceSettings,
+    getSourcesWithFilters,
+    getSourceTypes,
     getSupportedImageFormats,
+    getTextSources,
     getTransformableSceneItems,
-    OBSSceneItem
+    OBSCreateSourceParams,
+    OBSSceneItem,
+    OBSSource,
+    SourceData
 } from "./obs-remote";
 
 export function setupFrontendListeners(
@@ -93,5 +98,34 @@ export function setupFrontendListeners(
     frontendCommunicator.onAsync<never, Array<OBSSource>>(
         "obs-get-all-sources",
         getAllSources
+    );
+
+    frontendCommunicator.onAsync<never, Array<string>>(
+        "obs-get-source-types",
+        getSourceTypes
+    );
+
+    frontendCommunicator.onAsync<[inputName: string], Record<string, unknown>>(
+        "obs-get-source-settings",
+        (args) => {
+            const [inputName] = args;
+            return getSourceSettings(inputName);
+        }
+    );
+
+    frontendCommunicator.onAsync<[inputKind: string], Record<string, unknown>>(
+        "obs-get-source-default-settings",
+        (args) => {
+            const [inputKind] = args;
+            return getSourceDefaultSettings(inputKind);
+        }
+    );
+
+    frontendCommunicator.onAsync<[params: OBSCreateSourceParams], string>(
+        "obs-create-source",
+        (args) => {
+            const [params] = args;
+            return createSource(params);
+        }
     );
 }

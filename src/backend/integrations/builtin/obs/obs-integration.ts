@@ -1,4 +1,3 @@
-import { TypedEmitter } from "tiny-typed-emitter";
 import {
     Integration,
     IntegrationController,
@@ -6,74 +5,76 @@ import {
     IntegrationEvents
 } from "@crowbartools/firebot-custom-scripts-types";
 import { EventManager } from "@crowbartools/firebot-custom-scripts-types/types/modules/event-manager";
+import { TypedEmitter } from "tiny-typed-emitter";
 
-import logger from "../../../logwrapper";
+import frontendCommunicator from "../../../common/frontend-communicator";
 import effectManager from "../../../effects/effectManager";
 import eventManager from "../../../events/EventManager";
 import eventFilterManager from "../../../events/filters/filter-manager";
+import logger from "../../../logwrapper";
 import replaceVariableManager from "../../../variables/replace-variable-manager";
-import frontendCommunicator from "../../../common/frontend-communicator";
 
-import { initRemote } from "./obs-remote";
 import { setupFrontendListeners } from "./communicator";
+import { initRemote } from "./obs-remote";
 
-import { ChangeSceneEffectType } from "./effects/change-scene-effect-type";
 import { ChangeSceneCollectionEffectType } from "./effects/change-scene-collection";
+import { ChangeSceneEffectType } from "./effects/change-scene-effect-type";
+import { CreateSourceEffectType } from "./effects/create-obs-source";
 import { CreateRecordChapter } from "./effects/create-recording-chapter";
-import { ToggleSourceVisibilityEffectType } from "./effects/toggle-obs-source-visibility";
-import { ToggleSourceFilterEffectType } from "./effects/toggle-obs-source-filter";
-import { ToggleSourceMutedEffectType } from "./effects/toggle-obs-source-muted";
-import { TransformSourceEffectType } from "./effects/transform-obs-source";
-import { StartStreamEffectType } from "./effects/start-stream";
-import { StopStreamEffectType } from "./effects/stop-stream";
-import { StartVirtualCamEffectType } from "./effects/start-virtual-cam";
-import { StopVirtualCamEffectType } from "./effects/stop-virtual-cam";
 import { SaveReplayBufferEffectType } from "./effects/save-replay-buffer";
-import { SetOBSSourceTextEffectType } from "./effects/set-obs-source-text";
+import { SendRawOBSWebSocketRequestEffectType } from "./effects/send-raw-obs-websocket-request";
 import { SetOBSBrowserSourceUrlEffectType } from "./effects/set-obs-browser-source-url";
+import { SetOBSColorSourceColorEffectType } from "./effects/set-obs-color-source-color";
 import { SetOBSImageSourceFileEffectType } from "./effects/set-obs-image-source-file";
 import { SetOBSMediaSourceFileEffectType } from "./effects/set-obs-media-source-file";
-import { SetOBSColorSourceColorEffectType } from "./effects/set-obs-color-source-color";
-import { SendRawOBSWebSocketRequestEffectType } from "./effects/send-raw-obs-websocket-request";
+import { SetOBSSourceTextEffectType } from "./effects/set-obs-source-text";
+import { StartStreamEffectType } from "./effects/start-stream";
+import { StartVirtualCamEffectType } from "./effects/start-virtual-cam";
+import { StopStreamEffectType } from "./effects/stop-stream";
+import { StopVirtualCamEffectType } from "./effects/stop-virtual-cam";
 import { TakeOBSSourceScreenshotEffectType } from "./effects/take-obs-source-screenshot";
+import { ToggleSourceFilterEffectType } from "./effects/toggle-obs-source-filter";
+import { ToggleSourceMutedEffectType } from "./effects/toggle-obs-source-muted";
+import { ToggleSourceVisibilityEffectType } from "./effects/toggle-obs-source-visibility";
+import { TransformSourceEffectType } from "./effects/transform-obs-source";
 
 import { OBSEventSource } from "./events/obs-event-source";
 
 import GroupNameEventFilter from "./filters/group-name-filter";
 import SceneNameEventFilter from "./filters/scene-name-filter";
 
-import { SceneNameVariable } from "./variables/scene-name-variable";
-import { SceneCollectionNameVariable } from "./variables/scene-collection-name";
-import { IsConnectedVariable } from "./variables/is-connected";
-import { IsStreamingVariable } from "./variables/is-streaming";
-import { IsRecordingVariable } from "./variables/is-recording";
-import { ColorValueVariable } from "./variables/obs-color-value";
-import { SceneItemIdVariable } from "./variables/scene-item-id";
-import { SceneItemNameVariable } from "./variables/scene-item-name";
-import { SceneItemEnabledVariable } from "./variables/scene-item-enabled";
-import { TransitionNameVariable } from "./variables/transition-name";
-import { TransitionDurationVariable } from "./variables/transition-duration";
-import { ReplayBufferPathVariable } from "./variables/replay-buffer-path";
-import { ProfileNameVariable } from "./variables/profile-name";
-import { VendorNameVariable } from "./variables/vendor-name";
-import { VendorEventTypeVariable } from "./variables/vendor-event-type";
-import { VendorEventDataVariable } from "./variables/vendor-event-data";
-import { InputNameVariable } from "./variables/input-name";
-import { InputUuidVariable } from "./variables/input-uuid";
-import { InputKindVariable } from "./variables/input-kind";
-import { OldInputNameVariable } from "./variables/old-input-name";
-import { InputSettingsVariable } from "./variables/input-settings";
-import { InputActiveVariable } from "./variables/input-active";
-import { InputShowingVariable } from "./variables/input-showing";
-import { InputMutedVariable } from "./variables/input-muted";
-import { InputVolumeDbVariable } from "./variables/input-volume-db";
-import { InputVolumeMultiplierVariable } from "./variables/input-volume-multiplier";
-import { InputAudioBalanceVariable } from "./variables/input-audio-balance";
-import { InputAudioSyncOffsetVariable } from "./variables/input-audio-sync-offset";
-import { InputAudioTracksVariable } from "./variables/input-audio-tracks";
-import { InputAudioMonitorTypeVariable } from "./variables/input-audio-monitor-type";
 import { GroupItemIdVariable } from "./variables/group-item-id";
 import { GroupNameVariable } from "./variables/group-name";
+import { InputActiveVariable } from "./variables/input-active";
+import { InputAudioBalanceVariable } from "./variables/input-audio-balance";
+import { InputAudioMonitorTypeVariable } from "./variables/input-audio-monitor-type";
+import { InputAudioSyncOffsetVariable } from "./variables/input-audio-sync-offset";
+import { InputAudioTracksVariable } from "./variables/input-audio-tracks";
+import { InputKindVariable } from "./variables/input-kind";
+import { InputMutedVariable } from "./variables/input-muted";
+import { InputNameVariable } from "./variables/input-name";
+import { InputSettingsVariable } from "./variables/input-settings";
+import { InputShowingVariable } from "./variables/input-showing";
+import { InputUuidVariable } from "./variables/input-uuid";
+import { InputVolumeDbVariable } from "./variables/input-volume-db";
+import { InputVolumeMultiplierVariable } from "./variables/input-volume-multiplier";
+import { IsConnectedVariable } from "./variables/is-connected";
+import { IsRecordingVariable } from "./variables/is-recording";
+import { IsStreamingVariable } from "./variables/is-streaming";
+import { ColorValueVariable } from "./variables/obs-color-value";
+import { OldInputNameVariable } from "./variables/old-input-name";
+import { ProfileNameVariable } from "./variables/profile-name";
+import { ReplayBufferPathVariable } from "./variables/replay-buffer-path";
+import { SceneCollectionNameVariable } from "./variables/scene-collection-name";
+import { SceneItemEnabledVariable } from "./variables/scene-item-enabled";
+import { SceneItemIdVariable } from "./variables/scene-item-id";
+import { SceneItemNameVariable } from "./variables/scene-item-name";
+import { SceneNameVariable } from "./variables/scene-name-variable";
+import { TransitionDurationVariable } from "./variables/transition-duration";
+import { TransitionNameVariable } from "./variables/transition-name";
+import { VendorEventDataVariable } from "./variables/vendor-event-data";
+import { VendorEventTypeVariable } from "./variables/vendor-event-type";
+import { VendorNameVariable } from "./variables/vendor-name";
 
 type ObsSettings = {
     websocketSettings: {
@@ -142,6 +143,7 @@ class ObsIntegration
 
         effectManager.registerEffect(ChangeSceneEffectType);
         effectManager.registerEffect(ChangeSceneCollectionEffectType);
+        effectManager.registerEffect(CreateSourceEffectType);
         effectManager.registerEffect(CreateRecordChapter);
         effectManager.registerEffect(ToggleSourceVisibilityEffectType);
         effectManager.registerEffect(ToggleSourceFilterEffectType);
